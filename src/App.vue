@@ -1,27 +1,35 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App" />
+  <GameScreen v-if="userName" />
+  <WelcomeScreen v-else />
 </template>
 
-<script lang="ts">
-import { Options, Vue } from "vue-class-component";
-import HelloWorld from "./components/HelloWorld.vue";
+<script>
+import GameScreen from "./components/GameScreen";
+import WelcomeScreen from "./components/WelcomeScreen";
+import { mapState } from "vuex";
 
-@Options({
+export default {
   components: {
-    HelloWorld
+    GameScreen,
+    WelcomeScreen
+  },
+  computed: {
+    ...mapState("game", ["userName"])
   }
-})
-export default class App extends Vue {}
+};
 </script>
 
 <style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+@import url(~sanitize.css);
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;1,400&display=swap");
+
+body {
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-weight: 400;
+}
+
+[draggable] {
+  user-select: none;
 }
 </style>

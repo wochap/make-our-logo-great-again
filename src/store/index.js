@@ -1,4 +1,3 @@
-import { set as vueSet } from "vue";
 import { createStore } from "vuex";
 import random from "lodash.random";
 import shuffle from "lodash.shuffle";
@@ -53,6 +52,21 @@ const gameModule = {
     dirty: false
   }),
   getters: {
+    cardById(state) {
+      return state.cards.reduce(
+        (result, card) => ({
+          ...result,
+          [card.id]: card
+        }),
+        {}
+      );
+    },
+    stateCards(state) {
+      return state.state[0];
+    },
+    stateSlots(state) {
+      return state.state[1];
+    },
     cardIds(state) {
       return state.cards.map(card => card.id);
     },
@@ -62,7 +76,7 @@ const gameModule = {
     valueByPosition(state) {
       const result = {};
       for (const [listIndex, list] of state.state.entries()) {
-        for (const [itemIndex, item] of list) {
+        for (const [itemIndex, item] of list.entries()) {
           result[`${listIndex}-${itemIndex}`] = item;
         }
       }
@@ -71,34 +85,36 @@ const gameModule = {
     positionByCardId(state) {
       const result = {};
       for (const [listIndex, list] of state.state.entries()) {
-        for (const [itemIndex, item] of list) {
+        for (const [itemIndex, item] of list.entries()) {
           if (item) {
             result[item] = `${listIndex}-${itemIndex}`;
           }
         }
       }
       return result;
+    },
+    winStatus(state, getters) {
+      // check if positions are correct
+      return isEqual(
+        state.state[1].map(item => parseInt(item)),
+        getters.cardIds.map(item => parseInt(item))
+      );
     }
   },
   mutations: {
-    SET_TIME_SPEND(state, payload) {
+    SET_TIME_SPEND(state, { payload }) {
       state.timeSpend = payload;
     },
     SET_USER_NAME(state, payload) {
       state.userName = payload;
     },
-    SET_STATE(state, payload) {
+    SET_STATE(state, { payload }) {
       if (isArray(payload)) {
-        vueSet(state.state, payload);
+        state.state = payload;
         return;
       }
       const { cards, slots } = payload;
-      if (cards) {
-        vueSet(state.state, 0, cards);
-      }
-      if (slots) {
-        vueSet(state.state, 1, slots);
-      }
+      state.state = [cards || state.state[0], slots || state.state[1]];
     },
     SET_DIRTY(state, payload) {
       state.dirty = payload;
@@ -112,6 +128,13 @@ const gameModule = {
         getters.valueByPosition[`${cardNextX}-${cardNextY}`];
       const cardPosition = getters.positionByCardId[cardId];
       const [cardX, cardY] = cardPosition.split("-");
+      const hasDroppedInWrongSlot = parseInt(cardNextX) === 0;
+      const hasDroppedInSlot =
+        parseInt(cardX) === 0 && parseInt(cardNextX) === 1;
+      const hasDroppedInEmptySlot = valueInCardNextPosition === null;
+      const hasDroppedInCorrectSlot =
+        parseInt(cardNextX) === 1 &&
+        parseInt(getters.cardIds[cardNextY]) === parseInt(cardId);
       const prevState = cloneDeep(state.state);
       const newState = cloneDeep(state.state);
       newState[cardNextX][cardNextY] = cardId;
@@ -121,13 +144,6 @@ const gameModule = {
         payload: newState
       });
 
-      const hasDroppedInWrongSlot = parseInt(cardNextX) === 0;
-      const hasDroppedInSlot =
-        parseInt(cardX) === 0 && parseInt(cardNextX) === 1;
-      const hasDroppedInEmptySlot = valueInCardNextPosition === null;
-      const hasDroppedInCorrectSlot =
-        cardNextX === 1 && getters.cardIds[cardNextY] === cardId;
-
       if (
         hasDroppedInWrongSlot ||
         (hasDroppedInSlot && !hasDroppedInEmptySlot)
@@ -135,34 +151,34 @@ const gameModule = {
         //The user can drop the card only to the empty slot,
         //in the other case, the card goes back to the previous position.
         //TODO: show error message
-        commit({
-          type: "SET_STATE",
-          payload: prevState
-        });
+        setTimeout(() => {
+          //TODO:
+          alert("Slot is not empty!");
+          commit({
+            type: "SET_STATE",
+            payload: prevState
+          });
+        }, 0);
         return;
       }
 
       if (!hasDroppedInCorrectSlot) {
         //If the user drops the card to the incorrect slot
         //the time should be increased by 10 seconds.
-        commit({
-          type: "SET_TIME_SPEND",
-          payload: state.timeSpend + 10
-        });
+        setTimeout(() => {
+          alert("Incorrect slot :c");
+          commit({
+            type: "SET_TIME_SPEND",
+            payload: state.timeSpend + 10
+          });
+        }, 0);
       }
     },
-    getWinStatus({ state, getters }) {
-      // check if positions are correct
-      return isEqual(state.state[1], getters.cardIds);
-    },
     restart({ state, commit }) {
-      commit({
-        type: "SET_DIRTY",
-        PAYLOAD: false
-      });
+      commit("SET_DIRTY", false);
       commit({
         type: "SET_TIME_SPEND",
-        PAYLOAD: 0
+        payload: 0
       });
       commit({
         type: "SET_STATE",
@@ -183,32 +199,44 @@ const store = createStore({
 });
 let intervalId;
 
-store.subscribe(mutation => {
+store.subscribe(async mutation => {
   if (mutation.type === "game/SET_USER_NAME") {
     //Start game
     store.dispatch("game/restart");
   }
   if (mutation.type === "game/SET_STATE") {
     //Restart game if win after 10 seconds
-    const winStatus = store.dispatch("game/getWinStatus");
+    const winStatus = await store.getters["game/winStatus"];
     if (winStatus) {
+      clearInterval(intervalId);
       setTimeout(() => {
         store.dispatch("game/restart");
       }, 10000);
     }
   }
   if (mutation.type === "game/SET_DIRTY") {
-    clearInterval(intervalId);
-    if (mutation.payload) {
-      clearInterval(intervalId);
+    if (mutation.payload && !intervalId) {
       intervalId = setInterval(() => {
         store.commit({
           type: "game/SET_TIME_SPEND",
           payload: store.state.game.timeSpend + 1
         });
       }, 1000);
+    } else if (!mutation.payload) {
+      clearInterval(intervalId);
+      intervalId = null;
     }
   }
 });
 
 export default store;
+
+if (module.hot) {
+  module.hot.accept(() => {
+    store.hotUpdate({
+      modules: {
+        gameModule
+      }
+    });
+  });
+}

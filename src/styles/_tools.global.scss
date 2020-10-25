@@ -1,0 +1,30 @@
+@mixin wrapper {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: $max-width;
+  min-width: $min-width;
+  width: 100%;
+  padding: 1rem;
+}
+
+@mixin flexCenter {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  justify-content: center;
+}
+
+@mixin p {
+  color: $gray-medium;
+  font-weight: 500;
+  font-size: 0.9em;
+  margin: 0;
+}
+
+@mixin card {
+  border-radius: 5px;
+  height: 150px;
+  margin: 0;
+  width: 150px;
+}
