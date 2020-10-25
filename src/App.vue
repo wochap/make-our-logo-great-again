@@ -20,7 +20,8 @@ export default {
 </script>
 
 <style lang="scss">
-@import url(~sanitize.css);
+@import "~sanitize.css";
+@import "~toastr/build/toastr.min.css";
 @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;1,400&display=swap");
 
 body {

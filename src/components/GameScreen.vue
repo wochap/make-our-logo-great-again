@@ -70,7 +70,6 @@ export default {
         //TODO: fix bug
         return;
       }
-      debugger;
       this.moveCard({ cardId, position });
     }
   }
