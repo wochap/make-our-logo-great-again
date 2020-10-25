@@ -4,6 +4,24 @@ import shuffle from "lodash.shuffle";
 import cloneDeep from "lodash.clonedeep";
 import isArray from "lodash.isarray";
 import isEqual from "lodash.isequal";
+import toastr from "toastr";
+
+toastr.options = {
+  closeButton: true,
+  newestOnTop: false,
+  progressBar: true,
+  positionClass: "toast-bottom-center",
+  preventDuplicates: true,
+  onclick: null,
+  showDuration: "300",
+  hideDuration: "1000",
+  timeOut: "5000",
+  extendedTimeOut: "1000",
+  showEasing: "swing",
+  hideEasing: "linear",
+  showMethod: "fadeIn",
+  hideMethod: "fadeOut"
+};
 
 const gameModule = {
   namespaced: true,
@@ -96,8 +114,8 @@ const gameModule = {
     winStatus(state, getters) {
       // check if positions are correct
       return isEqual(
-        state.state[1].map(item => parseInt(item)),
-        getters.cardIds.map(item => parseInt(item))
+        state.state[1].map(cardId => getters.cardById[cardId]?.type),
+        getters.cardIds.map(cardId => getters.cardById[cardId]?.type)
       );
     }
   },
@@ -122,7 +140,7 @@ const gameModule = {
   },
   actions: {
     moveCard({ state, commit, getters }, { cardId, position }) {
-      //Switch values
+      //Switch cards
       const [cardNextX, cardNextY] = position.split("-");
       const valueInCardNextPosition =
         getters.valueByPosition[`${cardNextX}-${cardNextY}`];
@@ -134,7 +152,9 @@ const gameModule = {
       const hasDroppedInEmptySlot = valueInCardNextPosition === null;
       const hasDroppedInCorrectSlot =
         parseInt(cardNextX) === 1 &&
-        parseInt(getters.cardIds[cardNextY]) === parseInt(cardId);
+        getters.cardById[getters.cardIds[cardNextY]]?.type ===
+          getters.cardById[cardId]?.type;
+      debugger;
       const prevState = cloneDeep(state.state);
       const newState = cloneDeep(state.state);
       newState[cardNextX][cardNextY] = cardId;
@@ -150,10 +170,9 @@ const gameModule = {
       ) {
         //The user can drop the card only to the empty slot,
         //in the other case, the card goes back to the previous position.
-        //TODO: show error message
         setTimeout(() => {
           //TODO:
-          alert("Slot is not empty!");
+          toastr.error("Slot is not empty!");
           commit({
             type: "SET_STATE",
             payload: prevState
@@ -166,7 +185,7 @@ const gameModule = {
         //If the user drops the card to the incorrect slot
         //the time should be increased by 10 seconds.
         setTimeout(() => {
-          alert("Incorrect slot :c");
+          toastr.error("Incorrect slot :c");
           commit({
             type: "SET_TIME_SPEND",
             payload: state.timeSpend + 10
@@ -191,7 +210,6 @@ const gameModule = {
   }
 };
 
-//TODO: refactor, create game module
 const store = createStore({
   modules: {
     game: gameModule
@@ -208,6 +226,7 @@ store.subscribe(async mutation => {
     //Restart game if win after 10 seconds
     const winStatus = await store.getters["game/winStatus"];
     if (winStatus) {
+      toastr.success("You win");
       clearInterval(intervalId);
       setTimeout(() => {
         store.dispatch("game/restart");
@@ -215,6 +234,7 @@ store.subscribe(async mutation => {
     }
   }
   if (mutation.type === "game/SET_DIRTY") {
+    //Start counting score
     if (mutation.payload && !intervalId) {
       intervalId = setInterval(() => {
         store.commit({
