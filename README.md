@@ -1,6 +1,6 @@
 # Make out logo great again
 
-
+It is possible to run the game by locally opening the `i-want-to-play-a-game.html` file in the browser or opening this [link](https://gifted-golick-a58bc8.netlify.app/).
 
 ## Project setup
 ```
